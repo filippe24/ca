@@ -27,7 +27,9 @@ DISTFILES += \
     shaders/simpleshader.vert \
     shaders/simpleshader.frag \
     shaders/particle.frag \
-    shaders/particle.vert
+    shaders/particle.vert \
+    shaders/basic.frag \
+    shaders/basic.vert
 
 RESOURCES += \
     resources.qrc

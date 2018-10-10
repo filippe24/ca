@@ -19,15 +19,10 @@ public:
 	void setPolygonMode(bool bFill);
     void setPartMode(bool bPart);
 
-
-    //positions of all the particles in each frame
-    std::vector<float> positions;
-    //maximum number of partilces available
-    uint MaxParticles = 5;
-
-    //add a Particles to the list of particles
-    void addParticle(float x, float y, float z);
+    void resetAnimation();
     void clearParticles();
+
+
 
 public slots:
     void animate();
@@ -44,18 +39,60 @@ private:
 	void setProjection(float aspect);
 	void setModelview();
 
+    void initializePlane(glm::vec3 rb, glm::vec3 rt, glm::vec3 lt, glm::vec3 lb);
+    void initializeTriangle(glm::vec3 ver1, glm::vec3 ver2, glm::vec3 ver3);
+
+
 private:
     bool bPolygonFill, particleMode;
 	float angleX, angleY, distance;
 	QPoint lastMousePos;
 
-	QOpenGLShaderProgram *program;
+    QOpenGLShaderProgram *program, *programGeneral;
 	TriangleMesh mesh;
 
     GLuint quad_vertex_buffer, particles_position_buffer, particles_color_buffer;
     GLuint quadVBO, valueVBO, quadTextCoordVBO,vao;
 
+    std::vector<GLuint> planesVBO, trianglesVBO;
+
     animation an;
+
+    GLuint activeId;
+    GLuint particleShaderId,generalShaderId;
+
+    //dimension of the room
+    float room_dim_param = 0.5f;
+    float floor = 0.0f;
+    float roof = 2.0f;
+
+    //triangle paramters
+    glm::vec3 tri1 = glm::vec3(0.2f, 0.6f, 0.4f);
+    glm::vec3 tri2 = glm::vec3(0.3f, 0.7f, 0.1f);
+    glm::vec3 tri3 = glm::vec3(-0.2f, 0.6f, 0.3f);
+
+    //PARTICLES PARAMETERS
+    //radius of particles
+    float radius = 0.04f;
+    int num_part_per_frame = 20;
+    float part_lifetime = 5.0f;
+    float part_bouncing = 0.6f;
+    int max_num_of_part =  10*num_part_per_frame;
+    glm::vec3 par_initial_position = glm::vec3(0.0f, 0.5f, 0.0f);
+    float par_fountain_y = 3.0f;
+
+    //SPHERE PARAMETERS
+    glm::vec3 sphere_center = glm::vec3(-0.1f, 0.3f, 0.1f );
+    float sphere_radius = 0.2f;
+    float sphere_radius_delta = 0.1f;
+
+
+    //positions of all the particles in each frame
+    std::vector<float> positions;
+
+
+
+
 
 };
 

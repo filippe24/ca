@@ -1,4 +1,5 @@
 #include "particle.h"
+#include <iostream>
 
 Particle::Particle()
 {
@@ -146,12 +147,21 @@ void Particle::updateParticle(const float& dt, UpdateMethod method)
             break;
         case UpdateMethod::EulerSemi:
         {
-                                     // to be implemented
+            m_previousPosition = m_currentPosition;
+            m_velocity += m_force*dt;
+            m_currentPosition += m_velocity*dt;
+
         }
             break;
         case UpdateMethod::Verlet:
         {
-                                     // to be implemented
+            float k = 0.3f;
+            glm::vec3 m_old_pos = m_previousPosition;
+            m_previousPosition = m_currentPosition;
+            m_currentPosition = m_currentPosition + k*(m_currentPosition - m_old_pos) + m_velocity*(dt);
+
+//            m_velocity = (m_currentPosition - m_previousPosition)/dt;
+            m_velocity += m_force*dt;
         }
             break;
         }
@@ -160,14 +170,4 @@ void Particle::updateParticle(const float& dt, UpdateMethod method)
 }
 
 
-
-
-void Particle::printParticle()
-{
-
-    float x = m_currentPosition[0];
-    float y = m_currentPosition[1];
-    float z = m_currentPosition[2];
-
-}
 

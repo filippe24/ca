@@ -21,12 +21,11 @@ public:
 private slots:
 	void on_action_Quit_triggered();
 
-	void on_checkBoxFill_toggled(bool checked);
-
-    void on_checkBoxPart_toggled(bool checked);
-
 
 	void on_action_Open_triggered();
+
+
+    void on_restart_clicked();
 
 private:
 	Ui::MainWindow *ui;

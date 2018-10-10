@@ -20,17 +20,6 @@ void MainWindow::on_action_Quit_triggered()
 	 QApplication::quit();
 }
 
-void MainWindow::on_checkBoxFill_toggled(bool checked)
-{
-	 ui->openGLWidget->setPolygonMode(checked);
-}
-
-
-void MainWindow::on_checkBoxPart_toggled(bool checked)
-{
-     ui->openGLWidget->setPolygonMode(checked);
-}
-
 
 void MainWindow::on_action_Open_triggered()
 {
@@ -39,12 +28,11 @@ void MainWindow::on_action_Open_triggered()
 	ui->openGLWidget->loadMesh(filename);
 }
 
-void MainWindow::addParticles(float x, float y, float z)
-{
-    ui->openGLWidget->addParticle(x,y,z);
-}
 
-void MainWindow::clearParticles()
+
+
+
+void MainWindow::on_restart_clicked()
 {
-    ui->openGLWidget->clearParticles();
+    ui->openGLWidget->resetAnimation();
 }

@@ -42,10 +42,6 @@ public:
     void updateParticle(const float& dt, UpdateMethod method = UpdateMethod::EulerOrig);
 
 
-    //printing
-    void printParticle();
-
-
 
 private:
     glm::vec3 m_currentPosition;

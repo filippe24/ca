@@ -22,7 +22,9 @@ void main()
     //print the standard quad in the position given by the particle position, so project this position
     gl_Position = projection * modelview* vec4(particle_pos, 1.0);
     //add the quad position to the particle position, without modelview, in order to face always the camera
-    gl_Position.xyz += vec4(projection * vec4(quad_position, 1.0)).xyz ;
+//    gl_Position.xyz += vec4(projection * vec4(quad_position, 1.0)).xyz ;
+
+    gl_Position.xyz += vec4(vec4(quad_position, 1.0)).xyz ;
 
     ParticleColor = vec4(abs(gl_Position.x),abs(gl_Position.y),abs(gl_Position.z),1.0);
 

@@ -15,7 +15,6 @@ const float maxRotationCamera = 75.0f;
 const float minDistanceCamera = 1.0f;
 const float maxDistanceCamera = 10.0f;
 
-int counter = 0;
 float current_time = 0.0f;
 
 
@@ -24,7 +23,8 @@ GLWidget::GLWidget(QWidget *parent) : QOpenGLWidget(parent), bPolygonFill(true),
 
     std::cout<< "0.glWidget"<<std::endl;
 
-    program = NULL;
+    program = nullptr;
+    programGeneral = nullptr;
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setVersion(3, 3);
@@ -56,12 +56,84 @@ void GLWidget::initializeGL()
     if(particleMode)
     {
 
+        //FUNTIONS DEFINTIONS
+
         typedef void (APIENTRY *_glGenVertexArrays) (GLsizei, GLuint*);
         typedef void (APIENTRY *_glBindVertexArray) (GLuint);
         _glGenVertexArrays glGenVertexArrays;
          _glBindVertexArray glBindVertexArray;
         glGenVertexArrays = (_glGenVertexArrays) QOpenGLWidget::context()->getProcAddress("glGenVertexArrays");
         glBindVertexArray = (_glBindVertexArray) QOpenGLWidget::context()->getProcAddress("glBindVertexArray");
+
+
+
+
+        //*****************************
+        //********** GENERAL **********
+        //*****************************
+
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        programGeneral = new QOpenGLShaderProgram();
+        programGeneral->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/simpleshader.vert");
+        programGeneral->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simpleshader.frag");
+
+        programGeneral->bindAttributeLocation("position",0);
+
+        programGeneral->link();
+        if(!programGeneral->isLinked())
+        {
+                cout << "Shader program has not linked" << endl << endl << "Log: " << endl << endl << programGeneral->log().toStdString();
+                QApplication::quit();
+        }
+        programGeneral->bind();
+
+        float d = room_dim_param + radius;
+        float f = floor - radius;
+        float r = roof + radius;
+
+        //floor
+        initializePlane(glm::vec3(d, f, -d),glm::vec3(d, f, d),glm::vec3(-d, f, d),glm::vec3(-d, f, -d));
+        //right
+        initializePlane(glm::vec3(d, f, -d),glm::vec3(d, r, -d),glm::vec3(d, r, d),glm::vec3(d, f, d));
+        //front
+        initializePlane(glm::vec3(d, f, d),glm::vec3(-d, f, d),glm::vec3(-d, r, d),glm::vec3(d, r, d));
+        //left
+        initializePlane(glm::vec3(-d, f, -d),glm::vec3(-d, r, -d),glm::vec3(-d, r, d),glm::vec3(-d, f, d));
+        //back
+        initializePlane(glm::vec3(-d, f, -d),glm::vec3(d, f, -d),glm::vec3(d, r, -d),glm::vec3(-d, r, -d));
+
+        //addTriangle
+        initializeTriangle(tri1, tri2, tri3);
+
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glEnable(GL_DEPTH_TEST);
+
+        generalShaderId = programGeneral->programId();
+
+        glUseProgram(generalShaderId);
+
+        if(particleShaderId != generalShaderId)
+            std::cout << "****** general shader id e particle shader id sono diversi" << std::endl;
+        else
+            std::cout <<" ****** the ids are the same :()" << std::endl;
+
+        glUseProgram(0);
+        glBindVertexArray(0);
+
+        programGeneral->release();
+
+
+
+
+
+
+        //*********************************
+        //**********  PARTICLES  **********
+        //*********************************
+
 
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
@@ -90,10 +162,10 @@ void GLWidget::initializeGL()
         GLfloat quadVertices[] =
         {
              // Positions
-            0.1f,  -0.1f, 0.0f,
-            0.1f,  0.1f,  0.0f,
-            -0.1f, 0.1f,  0.0f,
-            -0.1f, -0.1f, 0.0f,
+            1.0f,  -1.0f, 0.0f,
+            1.0f,  1.0f,  0.0f,
+            -1.0f, 1.0f,  0.0f,
+            -1.0f, -1.0f, 0.0f,
         };
 
         //position
@@ -117,11 +189,21 @@ void GLWidget::initializeGL()
         glBufferData(GL_ARRAY_BUFFER, sizeof(valueBuffer), &valueBuffer, GL_STATIC_DRAW);
 
 
-
-
         //initialize animation
-        an = animation(5,0.01f,0.0f,0.0f,0.5f,0.0f);
+        an = animation();
+        an.setRoomParam(floor, room_dim_param);
+        an.setTriangleParam(tri1,tri2, tri3);
+        an.setSphereParam(sphere_center, sphere_radius);
+        an.setParticleParam(num_part_per_frame, part_lifetime, part_bouncing);
+        an.setFountain(par_initial_position.x, par_initial_position.y, par_initial_position.z, par_fountain_y);
+        an.initializeValues();
 
+        particleShaderId = program->programId();
+        activeId = particleShaderId;
+
+
+        glUseProgram(0);
+        program->release();
 
 
 
@@ -177,6 +259,81 @@ void GLWidget::paintGL()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+
+
+//        *****************************
+//        ********** GENERAL **********
+//        *****************************
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        programGeneral->bind();
+        activeId = generalShaderId;
+
+        programGeneral->setUniformValue("bLighting", bPolygonFill);
+
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(0.5f, 1.0f);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        programGeneral->setUniformValue("color", QVector4D(0.05f, 0.05f, 0.15f, 1.0f));
+
+        //print planes
+        for(uint i = 0; i < planesVBO.size(); i++)
+        {
+            glEnableVertexAttribArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER,planesVBO[i]);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        }
+
+
+        //set back to fill
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        bPolygonFill = false;
+
+        programGeneral->setUniformValue("color", QVector4D(0.9f, 0.8f, 0.6f, 1.0f));
+
+        //print triangles
+        for(uint i = 0; i < trianglesVBO.size(); i++)
+        {
+            glEnableVertexAttribArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER,trianglesVBO[i]);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+
+
+
+        //unbind
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+
+
+
+        programGeneral->release();
+
+
+
+
+
+
+
+
+
+
+        //*********************************
+        //**********  PARTICLES  **********
+        //*********************************
+
+
+//        glUseProgram(particleShaderId);
+//        activeId = particleShaderId;
+        program->bind();
+
         for(uint i= 0; i<positions.size(); i= i+3)
         {
             QVector3D par_pos;
@@ -184,13 +341,15 @@ void GLWidget::paintGL()
             par_pos.setY(positions[i+1]);
             par_pos.setZ(positions[i+2]);
 
-            float radius = 0.1f;
 
 
-            program->bind();
+//            program->bind();
             program->setUniformValue("color", QVector4D(0.75f, 0.8f, 0.9f, 1.0f));
+//            glUniform4f(glGetUniformLocation(particleShaderId, "color"), 0.75f, 0.8f, 0.9f, 1.0f);
             program->setUniformValue("particle_pos", par_pos);
+//            glUniform3f(glGetUniformLocation(particleShaderId, "particle_pos"), positions[i], positions[i+1], positions[i+2]);
             program->setUniformValue("radius", radius);
+//            glUniform1f(glGetUniformLocation(particleShaderId, "radius"), radius);
 
             glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 
@@ -199,11 +358,6 @@ void GLWidget::paintGL()
                 VERTICES,
                 VALUE
             };
-
-            std::cout << "***DRAWING PARTICLE *** iteration : " << i << std::endl;
-            std::cout << "     in Position pos  x:"<< positions[i] << " y:" << positions[i+1] << " z:" << positions[i+2] << std::endl;
-            std::cout << "     with number of Particles:" << positions.size()/3 << " and total number of coordinate:" << positions.size() << std::endl;
-
 
             glEnableVertexAttribArray(VERTICES);
             glBindBuffer(GL_ARRAY_BUFFER,quadVBO);
@@ -218,13 +372,52 @@ void GLWidget::paintGL()
 
             //unbind
             glBindBuffer(GL_ARRAY_BUFFER,0);
+            glBindBuffer(GL_ARRAY_BUFFER,0);
+
             glDisableVertexAttribArray(0);
 
-
-            program->release();
-
-
         }
+
+
+
+
+        //draw the sphere as a big particle
+
+        QVector3D center(sphere_center.x, sphere_center.y, sphere_center.z );
+        float rad = sphere_radius + sphere_radius_delta;
+
+        program->setUniformValue("color", QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        program->setUniformValue("particle_pos", center);
+        program->setUniformValue("radius", rad);
+
+        enum
+        {
+            VERTICES,
+            VALUE
+        };
+
+        glEnableVertexAttribArray(VERTICES);
+        glBindBuffer(GL_ARRAY_BUFFER,quadVBO);
+        glVertexAttribPointer(VERTICES, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+        glEnableVertexAttribArray(VALUE);
+        glBindBuffer(GL_ARRAY_BUFFER,valueVBO);
+        glVertexAttribPointer(VALUE, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        //unbind
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+
+        glDisableVertexAttribArray(0);
+
+
+
+
+        program->release();
+
+
 
 
     }
@@ -282,7 +475,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
 		distance = max(minDistanceCamera, min(distance, maxDistanceCamera));
 	}
 
-    lastMousePos = event->pos();animation:
+    lastMousePos = event->pos();
 
 	makeCurrent();
 	setModelview();
@@ -297,9 +490,18 @@ void GLWidget::setProjection(float aspect)
 	QMatrix4x4 projectionMatrix;
 
 	projectionMatrix.perspective(60, aspect, 0.01, 100.0);
-	program->bind();
-	program->setUniformValue("projection", projectionMatrix);
-	program->release();
+    program->bind();
+    program->setUniformValue("projection", projectionMatrix);
+    program->release();
+
+    programGeneral->bind();
+    programGeneral->setUniformValue("projection", projectionMatrix);
+    programGeneral->release();
+
+//    glUseProgram(activeId);
+//    glUniformMatrix4fv(glGetUniformLocation(activeId, "projection"), 1, GL_FALSE, projectionMatrix.data());
+//    glUseProgram(0);
+
 }
 
 void GLWidget::setModelview()
@@ -312,10 +514,22 @@ void GLWidget::setModelview()
 	modelviewMatrix.translate(0, 0, -distance);
 	modelviewMatrix.rotate(angleX, 1.0f, 0.0f, 0.0f);
 	modelviewMatrix.rotate(angleY, 0.0f, 1.0f, 0.0f);
-	program->bind();
-	program->setUniformValue("modelview", modelviewMatrix);
-	program->setUniformValue("normalMatrix", modelviewMatrix.normalMatrix());
-	program->release();
+    program->bind();
+    program->setUniformValue("modelview", modelviewMatrix);
+    program->setUniformValue("normalMatrix", modelviewMatrix.normalMatrix());
+    program->release();
+
+    programGeneral->bind();
+    programGeneral->setUniformValue("modelview", modelviewMatrix);
+    programGeneral->setUniformValue("normalMatrix", modelviewMatrix.normalMatrix());
+    programGeneral->release();
+
+
+//    glUseProgram(activeId);
+//    glUniformMatrix4fv(glGetUniformLocation(activeId, "modelview"), 1, GL_FALSE, modelviewMatrix.data());
+//    glUniformMatrix4fv(glGetUniformLocation(activeId, "normalMatrix"), 1, GL_FALSE, modelviewMatrix.data());
+//    glUseProgram(0);
+
 }
 
 void GLWidget::setPolygonMode(bool bFill)
@@ -352,7 +566,7 @@ void GLWidget::loadMesh(const QString &filename)
 	mesh.destroy();
 	reader.readMesh(filename, mesh);
 	makeCurrent();
-	if(!mesh.init(program))
+    if(!mesh.init(programGeneral))
 	{
 			cout << "Could not create vbo" << endl;
 			QApplication::quit();
@@ -361,36 +575,68 @@ void GLWidget::loadMesh(const QString &filename)
 	update();
 }
 
-void GLWidget::addParticle(float x, float y, float z)
-{
-    positions.push_back(x);
-    positions.push_back(y);
-    positions.push_back(z);
-}
-
-void GLWidget::clearParticles()
-{
-    positions.clear();
-}
-
 
 void GLWidget::animate()
 {
     positions.clear();
     positions = an.animate_frame();
 
-    std::cout<< "animate:  initialized " << positions.size()/3 << " positions " << std::endl;
-    std::cout<< "          and current time :" << current_time << " and time:" << time << std::endl;
-
-    //adding particle animation
-    if(counter < 30 )
+    if(positions.size() < max_num_of_part )
     {
-        an.addParticles(5);
+        an.addParticles(num_part_per_frame);
 
     }
 
     current_time + 0.01f;
-    counter ++;
 
     update();
 }
+
+
+void GLWidget::initializePlane( glm::vec3 rb, glm::vec3 rt, glm::vec3 lt, glm::vec3 lb)
+{
+
+    GLfloat planeVertices[] =
+    {
+         // Positions
+        rb.x,  rb.y, rb.z,
+        rt.x,  rt.y, rt.z,
+        lt.x,  lt.y, lt.z,
+        lb.x,  lb.y, lb.z,
+    };
+    GLuint tempVBO;
+    //position
+    glGenBuffers(1, &tempVBO);
+    //Generate, bind and fill VBO for vertices
+    glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
+    planesVBO.push_back(tempVBO);
+
+
+}
+
+void GLWidget::initializeTriangle( glm::vec3 ver1, glm::vec3 ver2, glm::vec3 ver3)
+{
+
+    GLfloat triangleVertices[] =
+    {
+         // Positions
+        ver1.x,  ver1.y, ver1.z,
+        ver2.x,  ver2.y, ver2.z,
+        ver3.x,  ver3.y, ver3.z,
+    };
+    GLuint tempVBO;
+    //position
+    glGenBuffers(1, &tempVBO);
+    //Generate, bind and fill VBO for vertices
+    glBindBuffer(GL_ARRAY_BUFFER, tempVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), &triangleVertices, GL_STATIC_DRAW);
+    trianglesVBO.push_back(tempVBO);
+}
+
+void GLWidget::resetAnimation()
+{
+    an.clearParticles();
+    std::cout << " would like to restart everything" << std::endl;
+}
+
