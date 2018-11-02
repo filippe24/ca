@@ -189,14 +189,7 @@ void GLWidget::initializeGL()
         glBufferData(GL_ARRAY_BUFFER, sizeof(valueBuffer), &valueBuffer, GL_STATIC_DRAW);
 
 
-        //initialize animation
-        an = animation();
-        an.setRoomParam(floor, room_dim_param);
-        an.setTriangleParam(tri1,tri2, tri3);
-        an.setSphereParam(sphere_center, sphere_radius);
-        an.setParticleParam(num_part_per_frame, part_lifetime, part_bouncing);
-        an.setFountain(par_initial_position.x, par_initial_position.y, par_initial_position.z, par_fountain_y);
-        an.initializeValues();
+        define_animation();
 
         particleShaderId = program->programId();
         activeId = particleShaderId;
@@ -252,6 +245,7 @@ void GLWidget::paintGL()
 {
 
     std::cout<< " 2. paint GL" <<std::endl;
+    std::cout<< " position x: " << par_initial_position.x << ", y: "<< par_initial_position.y << ", z: " << par_initial_position.z << std::endl;
 
 
     if(particleMode)
@@ -344,7 +338,7 @@ void GLWidget::paintGL()
 
 
 //            program->bind();
-            program->setUniformValue("color", QVector4D(0.75f, 0.8f, 0.9f, 1.0f));
+            program->setUniformValue("color", QVector4D(0.5f, 0.5f, 0.5f, 1.0f));
 //            glUniform4f(glGetUniformLocation(particleShaderId, "color"), 0.75f, 0.8f, 0.9f, 1.0f);
             program->setUniformValue("particle_pos", par_pos);
 //            glUniform3f(glGetUniformLocation(particleShaderId, "particle_pos"), positions[i], positions[i+1], positions[i+2]);
@@ -386,7 +380,7 @@ void GLWidget::paintGL()
         QVector3D center(sphere_center.x, sphere_center.y, sphere_center.z );
         float rad = sphere_radius + sphere_radius_delta;
 
-        program->setUniformValue("color", QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        program->setUniformValue("color", QVector4D(0.8f, 0.2f, 0.0f, 1.0f));
         program->setUniformValue("particle_pos", center);
         program->setUniformValue("radius", rad);
 
@@ -581,10 +575,12 @@ void GLWidget::animate()
     positions.clear();
     positions = an.animate_frame();
 
-    if(positions.size() < max_num_of_part )
+    if(positions.size() < max_num_of_part and !spring1Dbool )
     {
-        an.addParticles(num_part_per_frame);
-
+        if(fountain_mode)
+            an.addParticles(num_part_per_frame);
+        else
+            an.addParticles(1);
     }
 
     current_time + 0.01f;
@@ -639,4 +635,113 @@ void GLWidget::resetAnimation()
     an.clearParticles();
     std::cout << " would like to restart everything" << std::endl;
 }
+
+
+
+
+void GLWidget::update_radius(float rad)
+{
+    radius = rad;
+}
+void GLWidget::update_radius_int(int rad)
+{
+    radius = (float)rad/100.0f;;
+}
+
+void GLWidget::update_max_num(int num)
+{
+    max_num_of_part = num;
+//    define_animation();
+}
+
+void GLWidget::update_pos_x(float x_pos)
+{
+    par_initial_position.x = x_pos;
+//    resetAnimation();
+}
+void GLWidget::update_pos_y(float y_pos)
+{
+    par_initial_position.y = y_pos;
+//    resetAnimation();
+}
+void GLWidget::update_pos_z(float z_pos)
+{
+    par_initial_position.z = z_pos;
+//    resetAnimation();
+}
+void GLWidget::update_fountain_vel_y(float vy)
+{
+    par_fountain_y = vy;
+//    resetAnimation();
+}
+void GLWidget::define_animation()
+{
+    //initialize animation
+    an = animation();
+    an.setRoomParam(floor, room_dim_param);
+    an.setTriangleParam(tri1,tri2, tri3);
+    an.setSphereParam(sphere_center, sphere_radius);
+    if(num_part_per_frame > max_num_of_part)
+        an.setParticleParam(max_num_of_part, part_lifetime, part_bouncing);
+    else
+        an.setParticleParam(num_part_per_frame, part_lifetime, part_bouncing);
+    an.setFountain(par_initial_position.x, par_initial_position.y, par_initial_position.z, par_fountain_y);
+    an.setInitialVelocity(par_i_velocity_x, par_i_velocity_y, par_i_velcoity_z);
+    an.setFountainMode(fountain_mode);
+    an.setSpringMode(spring1Dbool,elast_ke, elast_l,damp_kd,spring_lenght);
+    an.setGravityPatam(gravity);
+    an.initializeValues();
+}
+
+void GLWidget::setFountainMode(bool b)
+{
+    fountain_mode = b;
+    define_animation();
+}
+void GLWidget::update_vel_x(float x_vel)
+{
+    par_i_velocity_x = x_vel;
+    define_animation();
+}
+void GLWidget::update_vel_y(float y_vel)
+{
+    par_i_velocity_y = y_vel;
+    define_animation();
+}
+void GLWidget::update_vel_z(float z_vel)
+{
+    par_i_velcoity_z = z_vel;
+    define_animation();
+}
+
+void GLWidget::set_elast_ke(float ke)
+{
+    elast_ke = ke;
+    define_animation();
+}
+void GLWidget::set_elast_l0(float l0)
+{
+    elast_l = l0;
+    define_animation();
+}
+
+void GLWidget::set_damp_kd(float kd)
+{
+    damp_kd = kd;
+    define_animation();
+}
+void GLWidget::set_length_spring(int s_l)
+{
+    spring_lenght = s_l;
+    define_animation();
+}
+void GLWidget::set_spring_param(float ke, float l0, float kd, int s_l)
+{
+    elast_ke = ke;
+    elast_l = l0;
+    damp_kd = kd;
+    spring_lenght = s_l;
+}
+
+
 
