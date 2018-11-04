@@ -155,11 +155,14 @@ void Particle::updateParticle(const float& dt, UpdateMethod method)
             break;
         case UpdateMethod::Verlet:
         {
-            float k = 0.3f;
+            float kd = 0.9f;
 
             m_velocity = m_currentPosition - m_previousPosition;
             m_previousPosition = m_currentPosition;
             m_currentPosition += m_velocity + m_force*dt*dt;
+//            m_currentPosition += kd*(m_currentPosition - m_previousPosition) + m_force*dt*dt;
+//            m_previousPosition = m_currentPosition;
+
 
 
             //glm::vec3 m_old_pos = m_previousPosition;

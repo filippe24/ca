@@ -12,6 +12,7 @@ class animation
 public:
     animation();
     void initializeValues();
+    void setUpdateMode(int selected);
     std::vector<float> animate_frame();
     void addParticles(int new_particles = 1);
 
@@ -30,8 +31,6 @@ public:
 
 private:
 
-    enum update_mode {euler, semi_euler, verlet};
-    update_mode cur_update_mode = verlet;
 
     Particle::UpdateMethod current_method = Particle::UpdateMethod::Verlet;
     bool first_frame = true;
@@ -73,6 +72,8 @@ private:
 
 
     //1-D spring
+    void compute_spring1D();
+    //parameters
     bool spring1D_b = false;
     int length_spring1D = 5;
     float k_e = 50;
@@ -82,6 +83,13 @@ private:
     glm::vec3 damping_force(int i, int j);
     glm::vec3 spring_force(int i, int j);
     float distance_particles(int i, int j);
+
+    //2-D spring
+    void compute_spring2D();
+    //parameters
+    bool spring2D_b = true;
+    int length_spring2D = 5;
+    int index2D(int i,int j);
 
 
 

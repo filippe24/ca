@@ -25,7 +25,17 @@ void animation::initializeValues()
 
 }
 
-
+void animation::setUpdateMode(int selected)
+{
+    if(selected == 0)
+        current_method = Particle::UpdateMethod::EulerOrig;
+    else if(selected == 1)
+        current_method = Particle::UpdateMethod::EulerSemi;
+    else if(selected == 2)
+        current_method = Particle::UpdateMethod::Verlet;
+    else
+        current_method = Particle::UpdateMethod::EulerSemi;
+}
 void animation::setParticleParam(int num_part, float life, float bounce)
 {
     std::cout << "set " <<num_part << " number of particles" << std::endl;
@@ -167,21 +177,45 @@ void animation::addParticles(int new_particles)
         vx = velocity_x;
         vy = velocity_y;
         vz = velocity_z;
+
+        //SPRING MODE
         if(spring1D_b)
         {
-            p1.setPosition(initial_x,initial_y, initial_z +  - i*l_0);
-            vx = 0.0; vy = 0.0; vz = 0.0;
-            p1.setForce(0.0,0.0,0.0);
+            //1D: the gravity is 0 because is added after computing the spring forces
+            if(not(spring2D_b))
+            {
+                p1.setPosition(initial_x,initial_y, initial_z + i*l_0);
+                p1.setForce(0.0,0.0,0.0);
+                p1.setVelocity(0.0, 0.0, 0.0);
+                current_particles.push_back(p1);
+            }
+            //2D MODE: create a matrix with lenght_spring1D rows and lenght_spring2d columns
+            else
+            {
+                for(int j = 0; j < length_spring2D ; j++)
+                {
+                    p1.setPosition(initial_x + j*l_0 ,initial_y, initial_z + i*l_0);
+                    p1.setForce(0.0,0.0,0.0);
+                    p1.setVelocity(0.0, 0.0, 0.0);
+                    current_particles.push_back(p1);
+                }
+            }
         }
+        //fountain mode
         else if(fountain_b)
         {
             vx = velocity_x + (((double) rand() / (RAND_MAX))  - 0.5f) ;
             vy = velocity_y + fountain_y;
             vz = velocity_z + (((double) rand() / (RAND_MAX))  - 0.5f);
+            p1.setVelocity(vx, vy, vz);
+            current_particles.push_back(p1);
         }
-
-        p1.setVelocity(vx, vy, vz);
-        current_particles.push_back(p1);
+        //velocity mode
+        else
+        {
+            p1.setVelocity(vx, vy, vz);
+            current_particles.push_back(p1);
+        }
     }
 }
 
@@ -191,74 +225,13 @@ void animation::addParticles(int new_particles)
 
 std::vector<float> animation::animate_frame()
 {
-
-
-
-
+    //we compute the 1dor 2d spring for all the particles in order, before checking for collision
     if(spring1D_b)
     {
-        glm::vec3 spring_force_prev;
-        std::cout<< "    ---   "<< std::endl;
-        for(uint i = 0; i < current_particles.size(); i++)
-        {
-            Particle p = current_particles[i];
-            if(p.getLifetime() > 0)
-            {
-                //spring
-                std::cout << "****SPRING****  particle: " << i << " out of " << current_particles.size() << std::endl;
-                glm::vec3 posi = p.getCurrentPosition();
-                std::cout << "      positions: "<<posi.x<< ", "<<posi.y<<", "<<posi.z<<std::endl;
-                std::cout << "Force before:" << p.getForce().x <<", "<< p.getForce().y <<", "<< p.getForce().z << std::endl;
-                std::cout << "parameters: Ke = " << k_e << ", l0 = " <<l_0 << std::endl;
-                p.setForce(0.0,0.0,0.0);
-                if(i == 0)
-                {
-                    std::cout << "      distance after:"<< distance_particles(i,i+1) << std::endl;
-                    //fixed particle
-                    p.setPosition(initial_x, initial_y, initial_z);
-                    p.setForce(0.0,0.0,0.0);
-                    glm::vec3 spring_force_next = spring_force(i,i+1);
-                    if(distance_particles(i,i+1) > 0)
-                    {
-                        spring_force_prev = -spring_force_next;
-                        std::cout << " set the force for the particle 1: "<< spring_force_prev.x<<", "<<spring_force_prev.y<<", "<< spring_force_prev.z << std::endl;
-                    }
-                    else
-                        spring_force_prev = glm::vec3(0);
-                }
-                else if(i == current_particles.size()-1)
-                {
-                    std::cout << "      distance before:"<< distance_particles(i-1,i) << std::endl;
-                    //last particle
-                    p.addForce(spring_force_prev);
-                }
-                else
-                {
-                    std::cout << "      distance before:"<< distance_particles(i,i-1) << std::endl;
-                    std::cout << "      distance after:"<< distance_particles(i,i+1) << std::endl;
-                    glm::vec3 spring_force_next = spring_force(i,i+1);
-                    p.addForce(spring_force_prev);
-                    if(i==1)
-                        std::cout << " the force of the particle 1: "<< spring_force_prev.x<<", "<<spring_force_prev.y<<", "<< spring_force_prev.z << std::endl;
-                    else
-                        std::cout<< "not interested" << std::endl;
-                    if(distance_particles(i,i+1) > 0)
-                    {
-                        p.addForce(spring_force_next);
-                        spring_force_prev = -spring_force_next;
-                    }
-                    else
-                    {
-                        spring_force_prev = glm::vec3(0);
-                    }
-
-                }
-                if(i!=0)
-                    p.addForce(0.0,g_a,0.0);
-                std::cout << "Force after:" << p.getForce().x <<", "<< p.getForce().y <<", "<< p.getForce().z << std::endl;
-            }
-            current_particles[i] = p;
-        }
+        if(spring2D_b)
+            compute_spring2D();
+        else
+            compute_spring1D();
     }
 
 
@@ -273,23 +246,20 @@ std::vector<float> animation::animate_frame()
 
             if(current_method == Particle::UpdateMethod::Verlet)
             {
-                if(p.getLifetime() >= (lifetime - dt))
+                if(p.getLifetime() > (lifetime - dt))
                 {
                     std::cout << "verlet, set previous position for particle " << i << " at lifetime " << p.getLifetime() << "  of " << lifetime << std::endl;
                     glm::vec3 ini_pos = p.getCurrentPosition();
                     glm::vec3 ini_vel = p.getVelocity();
                     p.setPreviousPosition(ini_pos.x - (ini_vel.x)*dt, ini_pos.y - (ini_vel.y)*dt, ini_pos.z - (ini_vel.z)*dt);
                 }
-                p.updateParticle(dt, current_method);
             }
+            p.updateParticle(dt, current_method);
             p.setLifetime(p.getLifetime() - dt);
 
-
-//                std::cout << "lifetime = " << p.getLifetime() << std::endl;
-//                std::cout << "position = " << p.getCurrentPosition().x << "  " << p.getCurrentPosition().y
-//                    << "  " << p.getCurrentPosition().z << "  time = " << time << std::endl;
-
-            //floor collisions
+            //**********************
+            //**floor collisions****
+            //**********************
             for (uint p_j = 0; p_j < planes.size(); p_j++)
             {
                 float disact, disant;
@@ -313,6 +283,7 @@ std::vector<float> animation::animate_frame()
                     glm::vec3 newVel = (glm::dot(vel,n))*n;
                     p.setVelocity((vel.x - (1+b)*newVel.x), (vel.y - (1+b)*newVel.y), (vel.z - (1+b)*newVel.z));
 
+                    //update of previous position for velrlet (maybe not necessary)
                     if(current_method == Particle::UpdateMethod::Verlet)
                     {
                         glm::vec3 normal_plane = planes[p_j].normal;
@@ -325,7 +296,9 @@ std::vector<float> animation::animate_frame()
                 }
             }
 
-            //triangle collision
+            //**********************
+            //**triangle collision*
+            //**********************
             for (uint t_i = 0; t_i < triangles.size(); t_i++)
             {
                 float disact, disant;
@@ -350,6 +323,7 @@ std::vector<float> animation::animate_frame()
                         glm::vec3 newVel = (glm::dot(vel,n))*n;
                         p.setVelocity((vel.x - (1+b)*newVel.x), (vel.y - (1+b)*newVel.y), (vel.z - (1+b)*newVel.z));
 
+                        //update of previous position for velrlet (maybe not necessary)
                         if(current_method == Particle::UpdateMethod::Verlet)
                         {
                             glm::vec3 normal_plane = t.normal;
@@ -365,7 +339,9 @@ std::vector<float> animation::animate_frame()
 
             }
 
-            //sphere collision
+            //**********************
+            //**sphere collision*
+            //**********************
             for (uint s_i = 0; s_i < spheres.size(); s_i++)
             {
                 bool inOld = spheres[s_i].isInside(p.getPreviousPosition());
@@ -429,7 +405,7 @@ std::vector<float> animation::animate_frame()
                 }
                 if(inNew)
                 {
-//                            std::cerr << "NOW INSIDE THE SPHERE" << std::endl;
+                            //std::cerr << "NOW INSIDE THE SPHERE" << std::endl;
                 }
             }
 
@@ -454,16 +430,22 @@ std::vector<float> animation::animate_frame()
 
 glm::vec3 animation::spring_force(int i, int j)
 {
-    Particle p_i = current_particles[i];
-    Particle p_j = current_particles[j];
-    glm::vec3 v_i = p_i.getVelocity();
-    glm::vec3 v_j = p_j.getVelocity();
-    glm::vec3 x_i = p_i.getCurrentPosition();
-    glm::vec3 x_j = p_j.getCurrentPosition();
+    //check for division by 0
+    if(distance_particles(i,j) > 0)
+    {
+        Particle p_i = current_particles[i];
+        Particle p_j = current_particles[j];
+        glm::vec3 v_i = p_i.getVelocity();
+        glm::vec3 v_j = p_j.getVelocity();
+        glm::vec3 x_i = p_i.getCurrentPosition();
+        glm::vec3 x_j = p_j.getCurrentPosition();
 
-    glm::vec3 direction = (x_j - x_i)/(glm::length(x_j - x_i));
-    glm::vec3 returned = (k_e*glm::length(x_j - x_i) - l_0+k_d*(v_j - v_i)*direction)*direction ;
-    return returned;
+        glm::vec3 direction = (x_j - x_i)/(glm::length(x_j - x_i));
+        glm::vec3 returned = (k_e*glm::length(x_j - x_i) - l_0+k_d*(v_j - v_i)*direction)*direction ;
+        return returned;
+     }
+    else
+        return glm::vec3(0.0,0.0,0.0);
 
 }
 float animation::distance_particles(int i, int j)
@@ -492,4 +474,154 @@ glm::vec3 animation::damping_force(int i, int j)
     glm::vec3 x_i = p_i.getCurrentPosition();
     glm::vec3 x_j = p_j.getCurrentPosition();
     return k_d*(v_j - v_i)*(x_j - x_i)/(glm::length(x_j - x_i));
+}
+
+
+
+//precomputation of the spring force in 1D for each particle with the previous and the next
+void animation::compute_spring1D()
+{
+    glm::vec3 spring_force_prev;
+    for(uint i = 0; i < current_particles.size(); i++)
+    {
+        Particle p = current_particles[i];
+        if(p.getLifetime() > 0)
+        {
+            //spring
+            glm::vec3 posi = p.getCurrentPosition();
+            p.setForce(0.0,0.0,0.0);
+            if(i == 0)
+            {
+                //first particle is fixed
+                p.setPosition(initial_x, initial_y, initial_z);
+                p.setForce(0.0,0.0,0.0);
+                glm::vec3 spring_force_next = spring_force(i,i+1);
+                spring_force_prev = -spring_force_next;
+            }
+            else if(i == current_particles.size()-1)
+            {
+                //last particle
+                p.addForce(spring_force_prev);
+            }
+            else
+            {
+                //internal particles
+                glm::vec3 spring_force_next = spring_force(i,i+1);
+                p.addForce(spring_force_prev);
+                p.addForce(spring_force_next);
+                spring_force_prev = -spring_force_next;
+
+            }
+            if(i!=0)
+                p.addForce(0.0,g_a,0.0);
+        }
+        current_particles[i] = p;
+    }
+}
+
+//precomputation of the 2d spring interactions
+//the 2d structures is based on a matrix formed by lenght_spring1D x lenght_spring2D
+//all of this is saved in the current_particles vector in orderto be printed
+//we need the access the i and j index to define the forces
+void animation::compute_spring2D()
+{
+    glm::vec3 spring_force_prev;
+    for(uint p_i = 0; p_i < current_particles.size(); p_i++)
+    {
+        Particle p = current_particles[p_i];
+        if(p.getLifetime() > 0)
+        {
+            int i = (int) p_i / length_spring2D;
+            int j = (int) p_i % length_spring2D;
+
+            //streach
+            //first row
+            if(i == 0)
+            {
+                int p_i_next = index2D(i+1,j);
+                int p_i_up = index2D(i,j-1);
+                int p_i_down = index2D(i, j+1);
+
+                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
+                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
+                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
+
+                p.addForce(streach_2);
+                p.addForce(streach_3);
+                p.addForce(streach_4);
+            }
+            //first column
+            else if(j == 0)
+            {
+                int p_i_prev = index2D(i-1,j);
+                int p_i_next = index2D(i+1,j);
+                int p_i_down = index2D(i, j+1);
+
+                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
+                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
+                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
+
+                p.addForce(streach_1);
+                p.addForce(streach_2);
+                p.addForce(streach_4);
+            }
+            //last row
+            else if(i == length_spring1D-1)
+            {
+                int p_i_prev = index2D(i-1,j);
+                int p_i_up = index2D(i,j-1);
+                int p_i_down = index2D(i, j+1);
+
+                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
+                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
+                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
+
+                p.addForce(streach_1);
+                p.addForce(streach_3);
+                p.addForce(streach_4);
+            }
+            //last row
+            else if(j == length_spring2D-1)
+            {
+                int p_i_prev = index2D(i-1,j);
+                int p_i_next = index2D(i+1,j);
+                int p_i_up = index2D(i,j-1);
+                int p_i_down = index2D(i, j+1);
+
+                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
+                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
+                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
+                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
+
+                p.addForce(streach_1);
+                p.addForce(streach_2);
+                p.addForce(streach_3);
+                p.addForce(streach_4);
+            }
+            else
+            {
+                int p_i_prev = index2D(i-1,j);
+                int p_i_next = index2D(i+1,j);
+                int p_i_up = index2D(i,j-1);
+                int p_i_down = index2D(i, j+1);
+
+                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
+                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
+                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
+                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
+
+                p.addForce(streach_1);
+                p.addForce(streach_2);
+                p.addForce(streach_3);
+                p.addForce(streach_4);
+            }
+
+        }
+        current_particles[p_i] = p;
+    }
+}
+//give back the index of the vector current_particles, correspondent to the matrix position (i,j)
+int animation::index2D(int i,int j)
+{
+    return i*length_spring2D + j;
 }

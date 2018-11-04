@@ -19,6 +19,8 @@ public:
 	void setPolygonMode(bool bFill);
     void setPartMode(bool bPart);
 
+    void update_updating_mode(int mode);
+
     void resetAnimation();
     void define_animation();
     void clearParticles();
@@ -26,21 +28,22 @@ public:
     void update_radius(float rad);
     void update_radius_int(int rad);
     void update_max_num(int num);
-    void update_pos_x(float x_pos);
-    void update_pos_y(float y_pos);
-    void update_pos_z(float z_pos);
+
     void update_fountain_vel_y(float vy);
 
     void setFountainMode(bool b);
-    void update_vel_x(float x_vel);
-    void update_vel_y(float y_vel);
-    void update_vel_z(float z_vel);
 
     void set_elast_ke(float ke);
     void set_elast_l0(float l0);
     void set_damp_kd(float kd);
     void set_length_spring(int s_l);
     void set_spring_param(float ke, float l0, float kd, int s_l);
+
+    void update_pos(float x_delta, float y_delta, float z_delta);
+    void update_vel(float x_delta, float y_delta, float z_delta);
+
+    void update_bouncing(float boun);
+    void update_spring_bool(bool spring_active);
 
 
 public slots:
@@ -80,6 +83,10 @@ private:
     GLuint activeId;
     GLuint particleShaderId,generalShaderId;
 
+    //update mode euler-semi-verlet
+    enum update_modes { euler, semi, verlet};
+    update_modes selected_update_mode = euler;
+
     //dimension of the room
     float room_dim_param = 2.0f;
     float floor = 0.0f;
@@ -98,7 +105,7 @@ private:
     float radius = 0.02f;
     int num_part_per_frame =10;
     float part_lifetime = 5.0f;
-    float part_bouncing = 0.9f;
+    float part_bouncing = 0.6f;
     int max_num_of_part =  400;
     glm::vec3 par_initial_position = glm::vec3(0.0f, 1.5f, 0.0f);
     float par_fountain_y = 3.0f;
@@ -106,7 +113,7 @@ private:
 
     float par_i_velocity_x = 0.0f;
     float par_i_velocity_y = 0.0f;
-    float par_i_velcoity_z = 0.0f;
+    float par_i_velocity_z = 0.0f;
 
     //SPHERE PARAMETERS
     glm::vec3 sphere_center = glm::vec3(-0.1f, 0.3f, 0.1f );
@@ -116,10 +123,14 @@ private:
     //SPRINGS
     //ELASTIC FORCE PARAMETERS
     bool spring1Dbool = false;
-    int spring_lenght = 10;
+    int spring_lenght = 5;
     float elast_ke = 98;
     float elast_l = 0.1f;
     float damp_kd = 9.8f;
+
+    //spring 2d
+    bool spring2Dbool = false;
+    int spring_lengt2 = 5;
 
     //positions of all the particles in each frame
     std::vector<float> positions;

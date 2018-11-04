@@ -244,9 +244,7 @@ void GLWidget::resizeGL(int w, int h)
 void GLWidget::paintGL()
 {
 
-    std::cout<< " 2. paint GL" <<std::endl;
-    std::cout<< " position x: " << par_initial_position.x << ", y: "<< par_initial_position.y << ", z: " << par_initial_position.z << std::endl;
-
+    //std::cout<< " 2. paint GL" <<std::endl;
 
     if(particleMode)
     {
@@ -374,7 +372,9 @@ void GLWidget::paintGL()
 
 
 
-
+        //*********************************
+        //**********  SPHERE  ************
+        //*********************************
         //draw the sphere as a big particle
 
         QVector3D center(sphere_center.x, sphere_center.y, sphere_center.z );
@@ -405,6 +405,57 @@ void GLWidget::paintGL()
         glBindBuffer(GL_ARRAY_BUFFER,0);
 
         glDisableVertexAttribArray(0);
+
+
+        //*********************************
+        //**********  POSITION DOT  *******
+        //*********************************
+        //it is a red dot the show the new intiali position of the particles, it is itself a particle
+        //and if in velocity mode, also point of the selected direction
+
+        QVector3D dot_pos(par_initial_position.x, par_initial_position.y, par_initial_position.z );
+        float dot_rad = 0.01f;
+
+        program->setUniformValue("color", QVector4D(1.0f, 0.0f, 0.0f, 1.0f));
+        program->setUniformValue("particle_pos", dot_pos);
+        program->setUniformValue("radius", dot_rad);
+
+        glEnableVertexAttribArray(VERTICES);
+        glBindBuffer(GL_ARRAY_BUFFER,quadVBO);
+        glVertexAttribPointer(VERTICES, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+        glEnableVertexAttribArray(VALUE);
+        glBindBuffer(GL_ARRAY_BUFFER,valueVBO);
+        glVertexAttribPointer(VALUE, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        //unbind
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+
+        glDisableVertexAttribArray(0);
+
+        //velocity direction
+        if(not(fountain_mode) and not(spring1Dbool) and not(spring2Dbool))
+        {
+            QVector3D dir_pos = dot_pos + QVector3D(par_i_velocity_x/10.0f,par_i_velocity_y/10.0f,par_i_velocity_z/10.0f);
+
+            program->setUniformValue("color", QVector4D(0.0f, 0.0f, 1.0f, 1.0f));
+            program->setUniformValue("particle_pos", dir_pos);
+            program->setUniformValue("radius", dot_rad);
+            glEnableVertexAttribArray(VERTICES);
+            glBindBuffer(GL_ARRAY_BUFFER,quadVBO);
+            glVertexAttribPointer(VERTICES, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+            glEnableVertexAttribArray(VALUE);
+            glBindBuffer(GL_ARRAY_BUFFER,valueVBO);
+            glVertexAttribPointer(VALUE, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+            glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+            //unbind
+            glBindBuffer(GL_ARRAY_BUFFER,0);
+            glBindBuffer(GL_ARRAY_BUFFER,0);
+            glDisableVertexAttribArray(0);
+        }
 
 
 
@@ -582,7 +633,8 @@ void GLWidget::animate()
         else
             an.addParticles(1);
     }
-
+    if(positions.size() == 0)
+        define_animation();
     current_time + 0.01f;
 
     update();
@@ -633,7 +685,7 @@ void GLWidget::initializeTriangle( glm::vec3 ver1, glm::vec3 ver2, glm::vec3 ver
 void GLWidget::resetAnimation()
 {
     an.clearParticles();
-    std::cout << " would like to restart everything" << std::endl;
+    define_animation();
 }
 
 
@@ -654,21 +706,7 @@ void GLWidget::update_max_num(int num)
 //    define_animation();
 }
 
-void GLWidget::update_pos_x(float x_pos)
-{
-    par_initial_position.x = x_pos;
-//    resetAnimation();
-}
-void GLWidget::update_pos_y(float y_pos)
-{
-    par_initial_position.y = y_pos;
-//    resetAnimation();
-}
-void GLWidget::update_pos_z(float z_pos)
-{
-    par_initial_position.z = z_pos;
-//    resetAnimation();
-}
+
 void GLWidget::update_fountain_vel_y(float vy)
 {
     par_fountain_y = vy;
@@ -678,6 +716,7 @@ void GLWidget::define_animation()
 {
     //initialize animation
     an = animation();
+    an.setUpdateMode(selected_update_mode);
     an.setRoomParam(floor, room_dim_param);
     an.setTriangleParam(tri1,tri2, tri3);
     an.setSphereParam(sphere_center, sphere_radius);
@@ -686,7 +725,7 @@ void GLWidget::define_animation()
     else
         an.setParticleParam(num_part_per_frame, part_lifetime, part_bouncing);
     an.setFountain(par_initial_position.x, par_initial_position.y, par_initial_position.z, par_fountain_y);
-    an.setInitialVelocity(par_i_velocity_x, par_i_velocity_y, par_i_velcoity_z);
+    an.setInitialVelocity(par_i_velocity_x, par_i_velocity_y, par_i_velocity_z);
     an.setFountainMode(fountain_mode);
     an.setSpringMode(spring1Dbool,elast_ke, elast_l,damp_kd,spring_lenght);
     an.setGravityPatam(gravity);
@@ -698,21 +737,7 @@ void GLWidget::setFountainMode(bool b)
     fountain_mode = b;
     define_animation();
 }
-void GLWidget::update_vel_x(float x_vel)
-{
-    par_i_velocity_x = x_vel;
-    define_animation();
-}
-void GLWidget::update_vel_y(float y_vel)
-{
-    par_i_velocity_y = y_vel;
-    define_animation();
-}
-void GLWidget::update_vel_z(float z_vel)
-{
-    par_i_velcoity_z = z_vel;
-    define_animation();
-}
+
 
 void GLWidget::set_elast_ke(float ke)
 {
@@ -743,5 +768,29 @@ void GLWidget::set_spring_param(float ke, float l0, float kd, int s_l)
     spring_lenght = s_l;
 }
 
-
-
+void GLWidget::update_pos(float x_delta, float y_delta, float z_delta)
+{
+    par_initial_position.x = par_initial_position.x + x_delta;
+    par_initial_position.y = par_initial_position.y + y_delta;
+    par_initial_position.z = par_initial_position.z + z_delta;
+}
+void GLWidget::update_bouncing(float boun)
+{
+    part_bouncing = boun;
+}
+void GLWidget::update_spring_bool(bool spring_active)
+{
+    spring1Dbool = spring_active;
+    define_animation();
+}
+void GLWidget::update_updating_mode(int mode)
+{
+    selected_update_mode = (update_modes)mode;
+    define_animation();
+}
+void GLWidget::update_vel(float x_delta, float y_delta, float z_delta)
+{
+    par_i_velocity_x = par_i_velocity_x + x_delta;
+    par_i_velocity_y = par_i_velocity_y + y_delta;
+    par_i_velocity_z = par_i_velocity_z + z_delta;
+}
