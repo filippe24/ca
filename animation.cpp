@@ -631,42 +631,48 @@ void animation::compute_spring2D()
             }
 
 
+
+
+            //BEND
+            if(i > 1)
+            {
+                int p_2prev = index2D(i-2,j);
+                glm::vec3 bend_1 = -spring_force(p_2prev, p_,2*l_0,k_e_bn,k_d_bn);
+                p.addForce(bend_1);
+            }
+            if(i < length_spring1D-2)
+            {
+                int p_2next = index2D(i+2,j);
+                glm::vec3 bend_2 = spring_force(p_, p_2next,2*l_0,k_e_bn,k_d_bn);
+                p.addForce(bend_2);
+            }
+            if(j > 1)
+            {
+                int p_2up = index2D(i,j-2);
+                glm::vec3 bend_3 = -spring_force(p_2up, p_,2*l_0,k_e_bn,k_d_bn);
+                p.addForce(bend_3);
+            }
+            if( j < length_spring2D-2)
+            {
+                int p_2down = index2D(i, j+2);
+                glm::vec3 bend_4 = spring_force(p_, p_2down,2*l_0,k_e_bn,k_d_bn);
+                p.addForce(bend_4);
+            }
+
+
             //fix the particles
 
-            if(((i==0) and (j == 0)) or ((i==0) and (j==length_spring2D-1)))
+//            if(((i==0) and (j == 0)) or ((i==0) and (j==length_spring2D-1)))
+//            {
+//                p.setFixed(true);
+//                p.setForce(0,0,0);
+//            }
+            if(i == 0)
             {
                 p.setFixed(true);
                 p.setForce(0,0,0);
             }
 
-
-
-
-//            //BEND
-//            if(i > 1)
-//            {
-//                int p_2prev = index2D(i-2,j);
-//                glm::vec3 bend_1 = -spring_force(p_2prev, p_);
-//                p.addForce(bend_1);
-//            }
-//            if(i < length_spring1D-2)
-//            {
-//                int p_2next = index2D(i+2,j);
-//                glm::vec3 bend_2 = spring_force(p_, p_2next);
-//                p.addForce(bend_2);
-//            }
-//            if(j > 1)
-//            {
-//                int p_2up = index2D(i,j-2);
-//                glm::vec3 bend_3 = -spring_force(p_2up, p_);
-//                p.addForce(bend_3);
-//            }
-//            if( j < length_spring2D-2)
-//            {
-//                int p_2down = index2D(i, j+2);
-//                glm::vec3 bend_4 = spring_force(p_, p_2down);
-//                p.addForce(bend_4);
-//            }
 
 
             p.addForce(0.0,g_a,0.0);

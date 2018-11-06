@@ -95,6 +95,8 @@ private:
     //shear param
     float k_e_sh = 50;
     float k_d_sh = 1;
+    float k_e_bn = 5;
+    float k_d_bn = 0.1f;
 
 
 

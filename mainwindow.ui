@@ -357,7 +357,7 @@
            <bool>false</bool>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <property name="usesScrollButtons">
            <bool>true</bool>
@@ -387,7 +387,7 @@
               <x>0</x>
               <y>0</y>
               <width>271</width>
-              <height>87</height>
+              <height>85</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="velocity_layout">
@@ -555,8 +555,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>281</width>
-              <height>181</height>
+              <width>214</width>
+              <height>158</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="spr_verticalLayout_2">
@@ -681,8 +681,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>281</width>
-              <height>234</height>
+              <width>192</width>
+              <height>205</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_2">
