@@ -205,3 +205,10 @@ void MainWindow::on_vel_z_m_bu_clicked()
 {
     ui->openGLWidget->update_vel(0.0,0.0,-unit_pos);
 }
+
+void MainWindow::on_enable_spring2d_radio_clicked(bool checked)
+{
+    ui->openGLWidget->update_spring2D_bool(checked);
+    ui->tabWidget_2->setTabEnabled(2, checked);
+    ui->tabWidget_2->setTabEnabled(2, not(checked));
+}

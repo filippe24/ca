@@ -44,6 +44,7 @@ public:
 
     void update_bouncing(float boun);
     void update_spring_bool(bool spring_active);
+    void update_spring2D_bool(bool spring2d_active);
 
 
 public slots:
@@ -124,9 +125,9 @@ private:
     //ELASTIC FORCE PARAMETERS
     bool spring1Dbool = false;
     int spring_lenght = 5;
-    float elast_ke = 98;
+    float elast_ke = 500;
     float elast_l = 0.1f;
-    float damp_kd = 9.8f;
+    float damp_kd = 10.0f;
 
     //spring 2d
     bool spring2Dbool = false;

@@ -27,6 +27,8 @@ public:
     void setGravityPatam(float grav);
     void setSpringMode(bool s_b,float ke_param, float l0_param, float kd_param, int s_l);
 
+    void set2DSpringMode(bool s2d_b);
+
     void clearParticles();
 
 private:
@@ -78,19 +80,21 @@ private:
     int length_spring1D = 5;
     float k_e = 50;
     float k_d = 10;
-    float l_0 = 0.02;
+    float l_0 = 0.1;
     glm::vec3 elastic_force(int i, int j);
     glm::vec3 damping_force(int i, int j);
-    glm::vec3 spring_force(int i, int j);
+    glm::vec3 spring_force(int i, int j, float l0, float ke, float kd);
     float distance_particles(int i, int j);
 
     //2-D spring
     void compute_spring2D();
     //parameters
-    bool spring2D_b = true;
+    bool spring2D_b = false;
     int length_spring2D = 5;
     int index2D(int i,int j);
-
+    //shear param
+    float k_e_sh = 50;
+    float k_d_sh = 1;
 
 
 

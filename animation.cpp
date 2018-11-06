@@ -156,7 +156,10 @@ void animation::setSpringMode(bool s_b,float ke_param, float l0_param, float kd_
     k_d = kd_param;
     length_spring1D = s_l;
 }
-
+void animation::set2DSpringMode(bool s2d_b)
+{
+    spring2D_b = s2d_b;
+}
 
 
 
@@ -428,10 +431,10 @@ std::vector<float> animation::animate_frame()
 
 }
 
-glm::vec3 animation::spring_force(int i, int j)
+glm::vec3 animation::spring_force(int i, int j, float l0, float ke, float kd)
 {
     //check for division by 0
-    if(distance_particles(i,j) > 0)
+    if((distance_particles(i,j) > 0 + l_0/2) or (distance_particles(i,j) < 0 - l_0/2))
     {
         Particle p_i = current_particles[i];
         Particle p_j = current_particles[j];
@@ -441,7 +444,7 @@ glm::vec3 animation::spring_force(int i, int j)
         glm::vec3 x_j = p_j.getCurrentPosition();
 
         glm::vec3 direction = (x_j - x_i)/(glm::length(x_j - x_i));
-        glm::vec3 returned = (k_e*glm::length(x_j - x_i) - l_0+k_d*(v_j - v_i)*direction)*direction ;
+        glm::vec3 returned = (ke*(glm::length(x_j - x_i) - l0) + kd*(v_j - v_i)*direction)*direction ;
         return returned;
      }
     else
@@ -488,14 +491,13 @@ void animation::compute_spring1D()
         if(p.getLifetime() > 0)
         {
             //spring
-            glm::vec3 posi = p.getCurrentPosition();
             p.setForce(0.0,0.0,0.0);
             if(i == 0)
             {
                 //first particle is fixed
                 p.setPosition(initial_x, initial_y, initial_z);
                 p.setForce(0.0,0.0,0.0);
-                glm::vec3 spring_force_next = spring_force(i,i+1);
+                glm::vec3 spring_force_next = spring_force(i,i+1, l_0, k_e, k_d);
                 spring_force_prev = -spring_force_next;
             }
             else if(i == current_particles.size()-1)
@@ -506,7 +508,7 @@ void animation::compute_spring1D()
             else
             {
                 //internal particles
-                glm::vec3 spring_force_next = spring_force(i,i+1);
+                glm::vec3 spring_force_next = spring_force(i,i+1, l_0, k_e, k_d);
                 p.addForce(spring_force_prev);
                 p.addForce(spring_force_next);
                 spring_force_prev = -spring_force_next;
@@ -525,99 +527,152 @@ void animation::compute_spring1D()
 //we need the access the i and j index to define the forces
 void animation::compute_spring2D()
 {
-    glm::vec3 spring_force_prev;
-    for(uint p_i = 0; p_i < current_particles.size(); p_i++)
+    glm::vec3 streach_prev;
+    std::vector<glm::vec3> spring_force_down;
+    spring_force_down.resize(length_spring1D);
+
+    std::vector<glm::vec3> spring_force_up_l;
+    std::vector<glm::vec3> spring_force_up_r;
+    spring_force_up_l.resize(length_spring2D);
+    spring_force_up_r.resize(length_spring2D);
+
+    for(uint p_ = 0; p_ < current_particles.size(); p_++)
     {
-        Particle p = current_particles[p_i];
+        Particle p = current_particles[p_];
+        p.setForce(0.0,0.0,0.0);
+
         if(p.getLifetime() > 0)
         {
-            int i = (int) p_i / length_spring2D;
-            int j = (int) p_i % length_spring2D;
+            int i = (int) p_ / length_spring2D;
+            int j = (int) p_ % length_spring2D;
+            std::cout << " particle :" << p_ << " with indices: (" << i << ", " << j << ")" << std::endl;
 
-            //streach
-            //first row
-            if(i == 0)
+            //STREACH
+            //row
+            if(j == 0)
             {
-                int p_i_next = index2D(i+1,j);
-                int p_i_up = index2D(i,j-1);
-                int p_i_down = index2D(i, j+1);
-
-                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
-                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
-                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
-
-                p.addForce(streach_2);
-                p.addForce(streach_3);
-                p.addForce(streach_4);
+                //first particle of row
+                int p_next = index2D(i,j+1);
+                glm::vec3 streach_next = spring_force(p_,p_next, l_0, k_e, k_d);
+                p.addForce(streach_next);
+                streach_prev = -streach_next;
+                std::cout << "next particle is: " << p_next << std::endl;
             }
-            //first column
-            else if(j == 0)
-            {
-                int p_i_prev = index2D(i-1,j);
-                int p_i_next = index2D(i+1,j);
-                int p_i_down = index2D(i, j+1);
-
-                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
-                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
-                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
-
-                p.addForce(streach_1);
-                p.addForce(streach_2);
-                p.addForce(streach_4);
-            }
-            //last row
-            else if(i == length_spring1D-1)
-            {
-                int p_i_prev = index2D(i-1,j);
-                int p_i_up = index2D(i,j-1);
-                int p_i_down = index2D(i, j+1);
-
-                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
-                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
-                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
-
-                p.addForce(streach_1);
-                p.addForce(streach_3);
-                p.addForce(streach_4);
-            }
-            //last row
             else if(j == length_spring2D-1)
             {
-                int p_i_prev = index2D(i-1,j);
-                int p_i_next = index2D(i+1,j);
-                int p_i_up = index2D(i,j-1);
-                int p_i_down = index2D(i, j+1);
-
-                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
-                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
-                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
-                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
-
-                p.addForce(streach_1);
-                p.addForce(streach_2);
-                p.addForce(streach_3);
-                p.addForce(streach_4);
+                //last particle of row
+                p.addForce(streach_prev);
             }
             else
             {
-                int p_i_prev = index2D(i-1,j);
-                int p_i_next = index2D(i+1,j);
-                int p_i_up = index2D(i,j-1);
-                int p_i_down = index2D(i, j+1);
+                //internal particles of row
+                int p_next = index2D(i,j+1);
+                glm::vec3 streach_next =  spring_force(p_,p_next, l_0, k_e, k_d);
+                p.addForce(streach_prev);
+                p.addForce(streach_next);
+                streach_prev = -streach_next;
+                std::cout << "next particle is: " << p_next << std::endl;
 
-                glm::vec3 streach_1 = spring_force(p_i_prev,p_i);
-                glm::vec3 streach_2 = spring_force(p_i,p_i_next);
-                glm::vec3 streach_3 = spring_force(p_i_up,p_i);
-                glm::vec3 streach_4 = spring_force(p_i,p_i_down);
-
-                p.addForce(streach_1);
-                p.addForce(streach_2);
-                p.addForce(streach_3);
-                p.addForce(streach_4);
+            }
+            //columns
+            if(i == 0)
+            {
+                //first particle down of column
+                int p_up = index2D(i+1,j);
+                glm::vec3 spring_force_up = spring_force(p_,p_up, l_0, k_e, k_d);
+                p.addForce(spring_force_up);
+                spring_force_down[j] = -spring_force_up;
+            }
+            else if(i == length_spring1D-1)
+            {
+                //last particle up of column
+                p.addForce(spring_force_down[j]);
+            }
+            else
+            {
+                //internal particles of column
+                int p_up = index2D(i+1,j);
+                glm::vec3 spring_force_up = spring_force(p_,p_up, l_0, k_e, k_d);
+                p.addForce(spring_force_down[j]);
+                p.addForce(spring_force_up);
+                spring_force_down[j] = -spring_force_up;
             }
 
+
+
+            //SHEAR
+            if((i != 0) and(j != 0))
+            {
+                int p_up_l = index2D(i-1, j-1);
+                glm::vec3 shear_1 = -spring_force(p_, p_up_l, l_0*1.41f,k_e, k_d);
+                p.addForce(spring_force_up_l[j-1]);
+
+            }
+            if((i != 0) and (j != length_spring2D-1))
+            {
+                int p_up_r = index2D(i-1, j+1);
+                glm::vec3 shear_2 = -spring_force(p_up_r, p_,l_0*1.41f,k_e, k_d);
+                p.addForce(spring_force_up_r[j+1]);
+
+            }
+            if((i != length_spring1D-1) and (j != 0))
+            {
+                int p_dw_l = index2D(i+1, j-1);
+                glm::vec3 shear_3 = spring_force(p_, p_dw_l,l_0*1.41f,k_e, k_d);
+                spring_force_up_r[j] = -shear_3;
+                p.addForce(shear_3);
+            }
+            if((i != length_spring1D-1) and (j != length_spring2D-1))
+            {
+                int p_dw_r = index2D(i+1, j+1);
+                glm::vec3 shear_4 = spring_force(p_, p_dw_r,l_0*1.41f,k_e, k_d);
+                spring_force_up_l[j] = -shear_4;
+                p.addForce(shear_4);
+            }
+
+
+            //fix the particles
+
+            if(((i==0) and (j == 0)) or ((i==0) and (j==length_spring2D-1)))
+            {
+                p.setFixed(true);
+                p.setForce(0,0,0);
+            }
+
+
+
+
+//            //BEND
+//            if(i > 1)
+//            {
+//                int p_2prev = index2D(i-2,j);
+//                glm::vec3 bend_1 = -spring_force(p_2prev, p_);
+//                p.addForce(bend_1);
+//            }
+//            if(i < length_spring1D-2)
+//            {
+//                int p_2next = index2D(i+2,j);
+//                glm::vec3 bend_2 = spring_force(p_, p_2next);
+//                p.addForce(bend_2);
+//            }
+//            if(j > 1)
+//            {
+//                int p_2up = index2D(i,j-2);
+//                glm::vec3 bend_3 = -spring_force(p_2up, p_);
+//                p.addForce(bend_3);
+//            }
+//            if( j < length_spring2D-2)
+//            {
+//                int p_2down = index2D(i, j+2);
+//                glm::vec3 bend_4 = spring_force(p_, p_2down);
+//                p.addForce(bend_4);
+//            }
+
+
+            p.addForce(0.0,g_a,0.0);
+
         }
-        current_particles[p_i] = p;
+        current_particles[p_] = p;
     }
 }
 //give back the index of the vector current_particles, correspondent to the matrix position (i,j)

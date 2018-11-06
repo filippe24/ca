@@ -93,6 +93,8 @@ private slots:
 
     void on_vel_z_m_bu_clicked();
 
+    void on_enable_spring2d_radio_clicked(bool checked);
+
 private:
 	Ui::MainWindow *ui;
 };

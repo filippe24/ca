@@ -684,7 +684,7 @@ void GLWidget::initializeTriangle( glm::vec3 ver1, glm::vec3 ver2, glm::vec3 ver
 
 void GLWidget::resetAnimation()
 {
-    an.clearParticles();
+//    an.clearParticles();
     define_animation();
 }
 
@@ -728,6 +728,7 @@ void GLWidget::define_animation()
     an.setInitialVelocity(par_i_velocity_x, par_i_velocity_y, par_i_velocity_z);
     an.setFountainMode(fountain_mode);
     an.setSpringMode(spring1Dbool,elast_ke, elast_l,damp_kd,spring_lenght);
+    an.set2DSpringMode(spring2Dbool);
     an.setGravityPatam(gravity);
     an.initializeValues();
 }
@@ -781,6 +782,11 @@ void GLWidget::update_bouncing(float boun)
 void GLWidget::update_spring_bool(bool spring_active)
 {
     spring1Dbool = spring_active;
+    define_animation();
+}
+void GLWidget::update_spring2D_bool(bool spring2d_active)
+{
+    spring2Dbool = spring2d_active;
     define_animation();
 }
 void GLWidget::update_updating_mode(int mode)

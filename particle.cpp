@@ -157,9 +157,9 @@ void Particle::updateParticle(const float& dt, UpdateMethod method)
         {
             float kd = 0.9f;
 
-            m_velocity = m_currentPosition - m_previousPosition;
+            m_velocity = (m_currentPosition - m_previousPosition)/dt;
             m_previousPosition = m_currentPosition;
-            m_currentPosition += m_velocity + m_force*dt*dt;
+            m_currentPosition += m_velocity*dt + m_force*dt*dt;
 //            m_currentPosition += kd*(m_currentPosition - m_previousPosition) + m_force*dt*dt;
 //            m_previousPosition = m_currentPosition;
 
